@@ -1,3 +1,5 @@
+import sqlite3
+
 class UserContact:
     def __init__(self,
                 name:str,
@@ -64,18 +66,53 @@ class ContactBuilder:
 
         del self.current_contacts[chat_id]
 
-
+class SqlContactBuilder:
+    def __init__(self, db_name: str = 'contacts.db'):
+        self.connection = sqlite3.connect(db_name, check_same_thread = False)
+        self.cursor = self.connection.cursor() 
+        self.current_contacts = {}
+        self._create_default_table()
         
+    def _create_default_table(self):
+        self.cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS Contacts (
+                            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                            chat_id        INTEGER NOT NULL,  
+                            name           TEXT NOT NULL,
+                            phone_number   TEXT NOT NULL,
+                            description    TEXT
+                            )
+                            ''')
 
 
+    def get_contacts(self, chat_id) -> list[UserContact]:
+        self.cursor.execute(f"SELECT * FROM Contacts WHERE chat_id = {chat_id}")
+        contacts = []
 
+        for contact in self.cursor.fetchall():
+            id, chat_id, name, phone_number, description = contact
+            contacts.append(UserContact(name, phone_number, description))
 
+        return contacts
 
+    def add_name(self, chat_id, name: str):
+        self.current_contacts[chat_id] = UserContact(name)
 
+    def add_phone_number(self, chat_id, phone_number: str):
+        self.current_contacts[chat_id].set_phone_number(phone_number)
 
+    def add_description(self, chat_id, description: str):
+        self.current_contacts[chat_id].set_description(description)
 
+    def build(self, chat_id):
+        current_contact = self.current_contacts[chat_id]
+        self.cursor.execute("INSERT INTO Contacts (chat_id, name, phone_number, description) VALUES (?,?,?,?)", [chat_id, current_contact.name, current_contact.phone_number, current_contact.description])
+        self.connection.commit()
+        del self.current_contacts[chat_id]
 
-
+    def __del__(self):
+        self.connection.commit()
+        self.connection.close()
 
 
 

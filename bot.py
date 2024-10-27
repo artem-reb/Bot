@@ -5,7 +5,7 @@ import contact_book
 
 from telebot import types 
 
-contact_builder = contact_book.ContactBuilder()
+contact_builder = contact_book.SqlContactBuilder()
 bot = telebot.TeleBot(config.token)
 
 def create_main_keyboard():
@@ -31,8 +31,9 @@ def handle_main_commands(message):
         contacts = contact_builder.get_contacts(message.chat.id)
         if len(contacts) > 0:
             bot.send_message(message.chat.id, 'Список всех контактов:')
-            for contact in contacts:
-                bot.send_message(message.chat.id, str(contact))
+            for number, contact in enumerate(contacts, start=1):
+                output_message = f'{number}. {contact}'
+                bot.send_message(message.chat.id, output_message)
         else:
             bot.send_message(message.chat.id, 'Список контактов пуст')
 
@@ -74,9 +75,6 @@ def process_description_step(message):
     contact_builder.build(message.chat.id)
     bot.send_message(message.chat.id, 'Контакт создан!', reply_markup=create_main_keyboard())
     bot.register_next_step_handler(message, handle_main_commands)
-
-
-
 
 
 bot.infinity_polling()
